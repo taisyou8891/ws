@@ -1,0 +1,15 @@
+[submodule "3DGS-Digital-Twin"]
+	path = 3DGS-Digital-Twin
+	url = https://github.com/taisyou8891/3DGS-Digital-Twin.git
+[submodule "RGBD-3DGS-SLAM"]
+	path = RGBD-3DGS-SLAM
+	url = https://github.com/jagennath-hari/RGBD-3DGS-SLAM.git
+[submodule "librealsense"]
+	path = librealsense
+	url = https://github.com/IntelRealSense/librealsense
+[submodule "realsense-ros2-docker"]
+	path = realsense-ros2-docker
+	url = https://github.com/2b-t/realsense-ros2-docker.git
+[submodule "segment-anything"]
+	path = segment-anything
+	url = https://github.com/facebookresearch/segment-anything.git
