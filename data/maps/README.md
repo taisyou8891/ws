@@ -7,6 +7,7 @@ InstantSplat で作った 3DGS 地図を、名前を付けて置く場所。
 - `data/maps/maps.json`：登録簿（追跡する）
 - `data/maps/<名前>/raw/`：地図の実体（追跡しない。大きく、画像に撮影時の情報が含まれうるため）
 - `data/maps/<名前>/raw_prev/`：`--replace` で置き換える前の版（追跡しない）
+- `data/input_data/`：地図を作り直すときの入力画像（追跡しない）
 
 ## maps.json の項目
 
@@ -75,14 +76,14 @@ docker run --rm instantsplat:local ls /InstantSplat/init_geo.py /InstantSplat/ma
 - 隣り合う写真が重なるように撮る。
 - ロボットと作業台が写るように撮る。
 - 拡張子は `.jpg`・`.jpeg`・`.png`（大文字と小文字は区別しない）。
-- 写真はリポジトリ直下の `my_data/` に置く（追跡しない）。`build_map.py` は既定でここを読み、`data/maps/<名前>/work/scene/images/` にコピーする。
-- `my_data/` の直下にある写真はすべて使われる。初期環境を変えるときは、前の写真を `my_data/` から別の場所に移してから、新しい写真を置く。
-- `my_data/` の中のサブディレクトリと、写真以外のファイル（zip など）は数えない。
+- 写真は `data/input_data/` に置く（追跡しない）。`build_map.py` は既定でここを読み、`data/maps/<名前>/work/scene/images/` にコピーする。
+- `data/input_data/` の直下にある写真はすべて使われる。初期環境を変えるときは、前の写真を `data/input_data/` から別の場所に移してから、新しい写真を置く。
+- `data/input_data/` の中のサブディレクトリと、写真以外のファイル（zip など）は数えない。
 
 写真の枚数は次のコマンドで数える。この値が `n_views` になる。
 
 ```
-find my_data -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) | wc -l
+find data/input_data -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) | wc -l
 ```
 
 ### 3. dry-run で実行内容を確かめる
@@ -102,7 +103,7 @@ python3 tools/maps/build_map.py --replace --dry-run
 python3 tools/maps/build_map.py --replace
 ```
 
-- 写真は既定で `my_data/` から読む。別の場所の写真を使うときは `--images_dir <ディレクトリ>` を付ける（手順 2・3 も同じディレクトリで行う）。
+- 写真は既定で `data/input_data/` から読む。別の場所の写真を使うときは `--images_dir <ディレクトリ>` を付ける（手順 2・3 も同じディレクトリで行う）。
 - 同じ名前の地図がある場合は `--replace` が要る。付け忘れると、InstantSplat を最後まで実行した後、取り込みの段階で終了コード 1 で止まる。
 - `--name <名前>`（既定 `map`）、`--iterations <反復数>`（既定 1000）、`--docker_image <イメージ>`（既定 `instantsplat:local`）を指定できる。
 - 実行には GPU と、手元の Docker イメージ `instantsplat:local` が要る。

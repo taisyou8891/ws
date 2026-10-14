@@ -64,9 +64,9 @@ def run_dry_default(root):
     )
 
 
-def test_default_images_dir_is_my_data(tmp_path):
+def test_default_images_dir_is_input_data(tmp_path):
     root = tmp_path / "root"
-    make_images(root / "my_data", ["a.jpg", "b.jpg", "c.png", "d.jpeg"])
+    make_images(root / "data" / "input_data",["a.jpg", "b.jpg", "c.png", "d.jpeg"])
     r = run_dry_default(root)
     assert r.returncode == 0
     assert "--n_views 4" in r.stdout
