@@ -15,7 +15,11 @@ IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png"}
 
 def parse_args(argv):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--images_dir", required=True, help="写真のディレクトリ")
+    p.add_argument(
+        "--images_dir",
+        default=None,
+        help="写真のディレクトリ（省略すると <--root の値>/my_data/ を使う）",
+    )
     p.add_argument("--name", default="map", help="地図の名前（既定 map）")
     p.add_argument("--iterations", type=int, default=1000, help="反復数（既定 1000）")
     p.add_argument("--docker_image", default="instantsplat:local", help="Docker イメージ")
@@ -81,7 +85,10 @@ def import_command(args, root, work):
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
     root = Path(args.root).resolve()
-    images_dir = Path(args.images_dir).resolve()
+    if args.images_dir is None:
+        images_dir = (root / "my_data").resolve()
+    else:
+        images_dir = Path(args.images_dir).resolve()
     if not images_dir.is_dir():
         print(f"error: 写真のディレクトリが見つからない: {images_dir}", file=sys.stderr)
         return 1

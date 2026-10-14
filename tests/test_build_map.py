@@ -55,3 +55,25 @@ def test_dry_run_creates_nothing(tmp_path):
     r = run_dry(imgs, root)
     assert r.returncode == 0
     assert not root.exists()
+
+
+def run_dry_default(root):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), "--root", str(root), "--dry-run"],
+        capture_output=True, text=True,
+    )
+
+
+def test_default_images_dir_is_my_data(tmp_path):
+    root = tmp_path / "root"
+    make_images(root / "my_data", ["a.jpg", "b.jpg", "c.png", "d.jpeg"])
+    r = run_dry_default(root)
+    assert r.returncode == 0
+    assert "--n_views 4" in r.stdout
+
+
+def test_default_images_dir_missing_exit_1(tmp_path):
+    root = tmp_path / "root"
+    root.mkdir()
+    r = run_dry_default(root)
+    assert r.returncode == 1
