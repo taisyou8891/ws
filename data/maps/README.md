@@ -107,6 +107,8 @@ python3 tools/maps/build_map.py --replace
 - 同じ名前の地図がある場合は `--replace` が要る。付け忘れると、InstantSplat を最後まで実行した後、取り込みの段階で終了コード 1 で止まる。
 - `--name <名前>`（既定 `map`）、`--iterations <反復数>`（既定 1000）、`--docker_image <イメージ>`（既定 `instantsplat:local`）を指定できる。
 - 実行には GPU と、手元の Docker イメージ `instantsplat:local` が要る。
+- イメージの PyTorch（2.6 以降）は `torch.load` の既定が `weights_only=True` で、そのままでは MASt3R の重みを読めない。`build_map.py` はコンテナに `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` を渡して、これを避ける。
+- 描画（render）の段階は、学習に使った視点の画像だけを `data/maps/<名前>/work/output/train/ours_<反復数>/renders/` に描く。動画は作らない。
 - 作業用のファイルは `data/maps/<名前>/work/` に作られる（追跡しない。実行のたびに作り直す）。
 - 各段階の出力は画面ではなく `data/maps/<名前>/work/output/` の `01_init_geo.log`・`02_train.log`・`03_render.log` に入る。進み具合は、別の端末で `tail -f data/maps/map/work/output/02_train.log` などで見る。
 - どこかの段階が失敗すると、そこで止まり、取り込みはしない。このとき今の地図（`raw/` と `maps.json`）は変わらない。
@@ -120,7 +122,7 @@ ls -l data/maps/map/raw/point_cloud.ply
 # 登録簿の変化（n_views と sha256 が変わり、frame は unaligned）
 git diff data/maps/maps.json
 # 描画結果（見た目の確認）
-ls data/maps/map/work/output/interp/ours_1000/
+ls data/maps/map/work/output/train/ours_1000/renders/
 ```
 
 ### 6. 作り直した後にすること
