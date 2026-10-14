@@ -28,3 +28,4 @@ data/maps/*/work/
 # External directories that are not git repositories
 /Ros2ForUnity/
 /my_data/
+data/input_data/

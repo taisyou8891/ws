@@ -18,7 +18,7 @@ def parse_args(argv):
     p.add_argument(
         "--images_dir",
         default=None,
-        help="写真のディレクトリ（省略すると <--root の値>/my_data/ を使う）",
+        help="写真のディレクトリ（省略すると <--root の値>/data/input_data/ を使う）",
     )
     p.add_argument("--name", default="map", help="地図の名前（既定 map）")
     p.add_argument("--iterations", type=int, default=1000, help="反復数（既定 1000）")
@@ -86,7 +86,7 @@ def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
     root = Path(args.root).resolve()
     if args.images_dir is None:
-        images_dir = (root / "my_data").resolve()
+        images_dir = (root / "data" / "input_data").resolve()
     else:
         images_dir = Path(args.images_dir).resolve()
     if not images_dir.is_dir():
