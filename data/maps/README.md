@@ -75,18 +75,20 @@ docker run --rm instantsplat:local ls /InstantSplat/init_geo.py /InstantSplat/ma
 - 隣り合う写真が重なるように撮る。
 - ロボットと作業台が写るように撮る。
 - 拡張子は `.jpg`・`.jpeg`・`.png`（大文字と小文字は区別しない）。
-- 写真は 1 つのディレクトリにまとめる。リポジトリの外に置いてよい（`build_map.py` が `data/maps/<名前>/work/scene/images/` にコピーする）。
+- 写真はリポジトリ直下の `my_data/` に置く（追跡しない）。`build_map.py` は既定でここを読み、`data/maps/<名前>/work/scene/images/` にコピーする。
+- `my_data/` の直下にある写真はすべて使われる。初期環境を変えるときは、前の写真を `my_data/` から別の場所に移してから、新しい写真を置く。
+- `my_data/` の中のサブディレクトリと、写真以外のファイル（zip など）は数えない。
 
 写真の枚数は次のコマンドで数える。この値が `n_views` になる。
 
 ```
-find <写真のディレクトリ> -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) | wc -l
+find my_data -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) | wc -l
 ```
 
 ### 3. dry-run で実行内容を確かめる
 
 ```
-python3 tools/maps/build_map.py --images_dir <写真のディレクトリ> --replace --dry-run
+python3 tools/maps/build_map.py --replace --dry-run
 ```
 
 次の 2 点を確かめる。この段階では何も作られない。
@@ -97,9 +99,10 @@ python3 tools/maps/build_map.py --images_dir <写真のディレクトリ> --rep
 ### 4. 地図を作り直す
 
 ```
-python3 tools/maps/build_map.py --images_dir <写真のディレクトリ> --replace
+python3 tools/maps/build_map.py --replace
 ```
 
+- 写真は既定で `my_data/` から読む。別の場所の写真を使うときは `--images_dir <ディレクトリ>` を付ける（手順 2・3 も同じディレクトリで行う）。
 - 同じ名前の地図がある場合は `--replace` が要る。付け忘れると、InstantSplat を最後まで実行した後、取り込みの段階で終了コード 1 で止まる。
 - `--name <名前>`（既定 `map`）、`--iterations <反復数>`（既定 1000）、`--docker_image <イメージ>`（既定 `instantsplat:local`）を指定できる。
 - 実行には GPU と、手元の Docker イメージ `instantsplat:local` が要る。
