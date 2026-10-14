@@ -1,0 +1,24 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "permissions": {
+    "deny": [
+      "Edit(.claude/ai-loop.json)",
+      "Write(.claude/ai-loop.json)",
+      "Edit(.claude/ai-loop/verify.sh)",
+      "Write(.claude/ai-loop/verify.sh)",
+      "Edit(.claude/settings.json)",
+      "Write(.claude/settings.json)",
+      "Bash(git push origin main*)",
+      "Bash(git push -f*)",
+      "Bash(git push --force*)",
+      "Bash(gh pr merge*)",
+      "Bash(gh issue close*)",
+      "Read(./.env)",
+      "Edit(./.env)"
+    ],
+    "ask": []
+  }
+}
