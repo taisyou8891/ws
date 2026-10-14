@@ -2,14 +2,14 @@
   "maps": [
     {
       "name": "map",
-      "source": "3DGS-Digital-Twin/external/InstantSplat/output_infer/examples/my_data/6_views",
+      "source": "data/maps/map/work/output",
       "n_views": 6,
       "iteration": 1000,
       "files": {
-        "point_cloud.ply": "de9e410eeffd6d91d720dc2ea6038c7b53fe3bf1aa4f402c5b1d1c677770e9e5",
+        "point_cloud.ply": "c2bb3318c7c2a2dfdaed67bf0a4f033866e2a6e64edcb8b229921af141a20513",
         "cameras.json": "2953ddafa091ee304a56e8b8ecbd286516c04d40d5125c1a7a0f53902cdcbec4",
-        "cfg_args": "898cfae0a867cddaf7e9dc754e62178b3d310b081c3f1efc375a60570348ac85",
-        "pose_optimized.npy": "998071be4b328ebd26057190136e910d30062a37e7e0590779f1488c525cf1d4",
+        "cfg_args": "e34938beb31405648b21de394079738d05f39c5fba6de77caf4cfac918099204",
+        "pose_optimized.npy": "541c6a5c428340be4f210fbcf229b669a53e000e0060a9dec1c4d3f06d31134f",
         "images/IMG_3816.jpg": "22804b61d454ac30254bde26f32bfd859359b9b61d7c73d72878d99263f369ec",
         "images/IMG_3817.jpg": "176b9bcc81415c771f7fa5dd9c72f78e1d6869f42d95904948e18a51b18321ae",
         "images/IMG_3818.jpg": "2da24399641d4c019caed84ec0c646a24d691dfed239a765336f5f856f0424ef",
