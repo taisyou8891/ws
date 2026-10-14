@@ -1,0 +1,27 @@
+# Unity
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/
+*.csproj
+*.sln
+.vs/
+
+# ROS 2
+build/
+install/
+log/
+
+# Python
+__pycache__/
+
+# Large data
+*.ply
+
+# External directories that are not git repositories
+/Ros2ForUnity/
+/my_data/
