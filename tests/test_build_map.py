@@ -77,3 +77,29 @@ def test_default_images_dir_missing_exit_1(tmp_path):
     root.mkdir()
     r = run_dry_default(root)
     assert r.returncode == 1
+
+
+def docker_lines(tmp_path):
+    imgs = make_images(tmp_path / "imgs", ["a.jpg", "b.jpg"])
+    r = run_dry(imgs, tmp_path / "root")
+    assert r.returncode == 0
+    return [l for l in r.stdout.splitlines() if "docker run" in l]
+
+
+def test_docker_run_sets_weights_only_env(tmp_path):
+    lines = docker_lines(tmp_path)
+    assert len(lines) == 3
+    for l in lines:
+        assert "-e TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1" in l
+
+
+def test_render_has_no_infer_video(tmp_path):
+    lines = [l for l in docker_lines(tmp_path) if "./render.py" in l]
+    assert len(lines) == 1
+    assert "--infer_video" not in lines[0]
+
+
+def test_init_geo_keeps_infer_video(tmp_path):
+    lines = [l for l in docker_lines(tmp_path) if "./init_geo.py" in l]
+    assert len(lines) == 1
+    assert "--infer_video" in lines[0]

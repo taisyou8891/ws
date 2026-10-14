@@ -52,7 +52,7 @@ def stage_commands(n_views, iterations):
         (
             "03_render.log",
             ["python", "./render.py", "-s", "/work/scene", "-m", "/work/output", "-r", "4",
-             "--n_views", n, "--iterations", it, "--infer_video"],
+             "--n_views", n, "--iterations", it],
         ),
     ]
 
@@ -62,6 +62,7 @@ def docker_command(args, work, stage):
         "docker", "run", "--rm", "--gpus", "all",
         "--user", f"{os.getuid()}:{os.getgid()}",
         "-e", "HOME=/tmp",
+        "-e", "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1",
         "-v", f"{work}:/work",
         "-w", "/InstantSplat",
         args.docker_image,
