@@ -2,6 +2,7 @@
   "dependencies": {
     "com.unity.collab-proxy": "2.12.4",
     "com.unity.feature.development": "1.0.2",
+    "com.unity.robotics.urdf-importer": "https://github.com/Unity-Technologies/URDF-Importer.git?path=/com.unity.robotics.urdf-importer#v0.5.2",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.timeline": "1.8.2",
     "com.unity.toolchain.linux-x86_64": "2.0.11",
