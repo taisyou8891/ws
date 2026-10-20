@@ -40,10 +40,33 @@ public class JointStateSubscriber : MonoBehaviour
 
     private readonly Dictionary<string, double> work = new Dictionary<string, double>();
 
+    // 切り分け用ログを 1 回だけ出すためのフラグ（メインスレッドでのみ使う）。
+    private bool loggedFirstMessage;
+    private bool loggedFirstApply;
+
     void Start()
     {
         ros2Unity = GetComponent<ROS2UnityComponent>();
         CollectJoints();
+        LogStartup();
+    }
+
+    private void LogStartup()
+    {
+        if (robotRoot != null)
+        {
+            bool inScene = robotRoot.gameObject.scene.IsValid();
+            Debug.Log("JointStateSubscriber: robotRoot=" + robotRoot.name + " シーン内=" + inScene);
+            if (!inScene)
+            {
+                Debug.LogWarning("JointStateSubscriber: robotRoot がシーンの中のオブジェクトではありません（プレハブのファイルなどを指している可能性があります）。");
+            }
+        }
+        Debug.Log("JointStateSubscriber: 見つけた関節 " + bodies.Count + " 個: " + string.Join(", ", bodies.Keys));
+        if (bodies.Count == 0)
+        {
+            Debug.LogWarning("JointStateSubscriber: 関節が 0 個です。");
+        }
     }
 
     private void CollectJoints()
@@ -86,11 +109,29 @@ public class JointStateSubscriber : MonoBehaviour
             hasNew = false;
         }
 
+        if (!loggedFirstMessage)
+        {
+            loggedFirstMessage = true;
+            Debug.Log("JointStateSubscriber: 最初のメッセージの関節 " + work.Count + " 個: " + string.Join(", ", work.Keys));
+        }
+
+        int appliedCount = 0;
+        string sampleName = null;
+        ArticulationBody sampleBody = null;
+        double sampleValue = 0;
+
         foreach (KeyValuePair<string, double> pair in work)
         {
             if (bodies.TryGetValue(pair.Key, out ArticulationBody body))
             {
                 Apply(body, pair.Value);
+                appliedCount++;
+                if (sampleBody == null)
+                {
+                    sampleName = pair.Key;
+                    sampleBody = body;
+                    sampleValue = pair.Value;
+                }
             }
             else if (!IsMimic(pair.Key) && warnedNames.Add(pair.Key))
             {
@@ -107,6 +148,22 @@ public class JointStateSubscriber : MonoBehaviour
                 {
                     Apply(body, driveValue);
                 }
+            }
+        }
+
+        if (!loggedFirstApply)
+        {
+            loggedFirstApply = true;
+            if (sampleBody == null)
+            {
+                Debug.Log("JointStateSubscriber: 最初の反映: 反映した関節は " + appliedCount + " 個（メッセージの関節名がモデルと一致しません）");
+            }
+            else
+            {
+                Debug.Log("JointStateSubscriber: 最初の反映: " + appliedCount + " 個。例 " + sampleName
+                    + " 値(rad)=" + sampleValue
+                    + " jointPosition[0]=" + sampleBody.jointPosition[0]
+                    + " xDrive.target=" + sampleBody.xDrive.target);
             }
         }
     }
