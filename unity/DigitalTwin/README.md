@@ -18,9 +18,9 @@ Unity Hub で `unity/DigitalTwin/` を開く。URDF Importer は `Packages/manif
 
 ### 1. ロボットの根元を固定し、重力を切る
 
-1. Hierarchy でロボットの一番上（`xarm6`）を開き、その下の根元のリンク（`link_base` や `world` など、Articulation Body が付いている一番上のもの）を選ぶ。
-2. Inspector の **Articulation Body** で **Immovable** にチェックを入れる。根元が落ちたり倒れたりしなくなる。
-3. 同じところの **Use Gravity** のチェックを外す。関節が重力で垂れ下がらないようにするため。子のリンクにも Articulation Body が付いているので、垂れ下がるようならそれらの Use Gravity も外す。
+1. Hierarchy でロボット（`UF_ROBOT`）を開き、その下の根元のリンク（`link_base` Articulation Body が付いている）を選ぶ。
+3. Inspector の **Articulation Body** で **Immovable** にチェックを入れる。根元が落ちたり倒れたりしなくなる。
+4. 同じところの **Use Gravity** のチェックを外す。関節が重力で垂れ下がらないようにするため。子のリンクにも Articulation Body が付いているので、垂れ下がるようならそれらの Use Gravity も外す。
 
 ### 2. 受信用の空のオブジェクトを作る
 
