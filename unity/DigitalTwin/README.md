@@ -10,7 +10,7 @@ Unity Hub で `unity/DigitalTwin/` を開く。URDF Importer は `Packages/manif
 
 1. `Assets/Robot/xarm6/xarm6.urdf` を選ぶ。
 2. 右クリックして「Import Robot from Selected URDF file」を選ぶ。
-3. Axis Type は既定の Y Axis のままで取り込む（Z Axis にすると、各リンクの形が回ってばらばらに表示される）。
+3. Axis Type は既定の Y Axis のままで取り込む。
 
 取り込むと、Hierarchy に `UF_ROBOT` のような名前でロボットが出る。
 
