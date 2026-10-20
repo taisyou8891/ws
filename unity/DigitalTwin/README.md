@@ -51,6 +51,10 @@ Unity と ROS 2 の端末は、同じ ROS_DOMAIN_ID でないと通信できな�
 
 設定が終わったら、Ctrl+S でシーンを保存する。
 
+## カメラ位置の操作
+
+メニューの GameObject → Align With View（Ctrl+Shift+F）を選ぶ。Main Camera が今の Scene ビューと同じ位置・向きに移り、再生中もその視点で見える。
+
 ## 動作の確かめ方
 
 1. Unity の ▶（再生）ボタンを押す。
@@ -66,10 +70,3 @@ Unity と ROS 2 の端末は、同じ ROS_DOMAIN_ID でないと通信できな�
 
 `xarm_description` の `xarm6_rviz_display.launch.py` はスライダーの GUI を出さない（実機のドライバの関節の状態を中継するためのもの）ので、この確認には使わない。
 
-## エラーの見方
-
-Unity のメニューの **Window → General → Console**（Ctrl+Shift+C）で、エラー（赤）と警告（黄）を見られる。同じ内容は `~/.config/unity3d/Editor.log` にも残る。
-
-## 実機を使うとき
-
-xarm_ros2 のドライバが出す関節の状態のトピック名に **Topic Name** を、ドライバを動かす端末の ROS_DOMAIN_ID に **Domain Id** を合わせる。
