@@ -10,7 +10,7 @@ Unity Hub で `unity/DigitalTwin/` を開く。URDF Importer は `Packages/manif
 
 1. `Assets/Robot/xarm6/xarm6.urdf` を選ぶ。
 2. 右クリックして「Import Robot from Selected URDF file」を選ぶ。
-3. Axis Type を Z Axis にして取り込む。
+3. Axis Type は既定の Y Axis のままで取り込む（Z Axis にすると、各リンクの形が回ってばらばらに表示される）。
 
 取り込むと、Hierarchy に `UF_ROBOT` のような名前でロボットが出る。
 
@@ -19,8 +19,8 @@ Unity Hub で `unity/DigitalTwin/` を開く。URDF Importer は `Packages/manif
 ### 1. ロボットの根元を固定し、重力を切る
 
 1. Hierarchy でロボット（`UF_ROBOT`）を開き、その下の根元のリンク（`link_base` Articulation Body が付いている）を選ぶ。
-3. Inspector の **Articulation Body** で **Immovable** にチェックを入れる。根元が落ちたり倒れたりしなくなる。
-4. 同じところの **Use Gravity** のチェックを外す。関節が重力で垂れ下がらないようにするため。子のリンクにも Articulation Body が付いているので、垂れ下がるようならそれらの Use Gravity も外す。
+2. Inspector の **Articulation Body** で **Immovable** にチェックを入れる。根元が落ちたり倒れたりしなくなる。
+3. 同じところの **Use Gravity** のチェックを外す。関節が重力で垂れ下がらないようにするため。子のリンクにも Articulation Body が付いているので、垂れ下がるようならそれらの Use Gravity も外す。
 
 ### 2. 受信用の空のオブジェクトを作る
 
@@ -29,7 +29,7 @@ Unity Hub で `unity/DigitalTwin/` を開く。URDF Importer は `Packages/manif
 
 ### 3. 動かすロボットを指定する
 
-`RosBridge` を選んだまま、Inspector の JointStateSubscriber の欄にある **Robot Root** の枠に、Hierarchy のロボット（`xarm6`）をドラッグして入れる。
+`RosBridge` を選んだまま、Inspector の JointStateSubscriber の欄にある **Robot Root** の枠に、Hierarchy のロボット（`UF_ROBOT`）をドラッグして入れる。
 
 ### 4. Inspector で変えられる項目
 
