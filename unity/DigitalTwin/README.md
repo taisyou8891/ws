@@ -12,17 +12,36 @@ Unity Hub で `unity/DigitalTwin/` を開く。URDF Importer は `Packages/manif
 2. 右クリックして「Import Robot from Selected URDF file」を選ぶ。
 3. Axis Type を Z Axis にして取り込む。
 
+取り込むと、Hierarchy に `xarm6` のような名前でロボットが出る。
+
 ## ロボットとシーンの設定
 
-1. 取り込んだロボットのルートの `ArticulationBody` を Immovable にし、重力を切る。
-2. シーンに空の GameObject を作り、`ROS2UnityComponent` と `JointStateSubscriber` を付ける。
-3. `JointStateSubscriber` の `robotRoot` に、取り込んだロボットを設定する。
+### 1. ロボットの根元を固定し、重力を切る
 
-`topicName`（既定 `/joint_states`）・`nodeName`・`mimicJoints`（`drive_joint` に追従する関節の名前）は Inspector で変えられる。
+1. Hierarchy でロボットの一番上（`xarm6`）を開き、その下の根元のリンク（`link_base` や `world` など、Articulation Body が付いている一番上のもの）を選ぶ。
+2. Inspector の **Articulation Body** で **Immovable** にチェックを入れる。根元が落ちたり倒れたりしなくなる。
+3. 同じところの **Use Gravity** のチェックを外す。関節が重力で垂れ下がらないようにするため。子のリンクにも Articulation Body が付いているので、垂れ下がるようならそれらの Use Gravity も外す。
+
+### 2. 受信用の空のオブジェクトを作る
+
+1. Hierarchy の何もないところを右クリックし、**Create Empty** を選ぶ。名前は何でもよい（例：`RosBridge`）。
+2. そのオブジェクトを選び、Inspector の **Add Component** で `ROS2UnityComponent` を追加し、続けて `JointStateSubscriber` も追加する。2 つとも同じオブジェクトに付ける。
+
+### 3. 動かすロボットを指定する
+
+`RosBridge` を選んだまま、Inspector の JointStateSubscriber の欄にある **Robot Root** の枠に、Hierarchy のロボット（`xarm6`）をドラッグして入れる。
+
+### 4. Inspector で変えられる項目
+
+どれも通常は変えなくてよい。
+
+- **Topic Name**：受け取るトピックの名前。既定は `/joint_states`。実機のドライバが別の名前で出しているときだけ合わせる。
+- **Node Name**：Unity 側の ROS 2 ノードの名前。既定のままでよい。
+- **Mimic Joints**：グリッパの `drive_joint` と同じ動きをさせる関節の名前の一覧。既定で 5 つ入っている。
 
 ## 動作の確かめ方
 
-Unity でシーンを再生した状態で、別の端末で次を実行する。
+Unity の再生ボタンを押した状態で、別の端末で次を実行する。
 
 ```bash
 source /opt/ros/humble/setup.bash
@@ -30,8 +49,8 @@ source ros2_ws/install/setup.bash
 ros2 launch xarm_description xarm6_rviz_display.launch.py add_gripper:=true
 ```
 
-GUI のスライダーを動かすと、Unity のモデルも同じように動く。
+出てきた GUI のスライダーを動かすと、Unity のロボットも同じように動く。
 
 ## 実機を使うとき
 
-xarm_ros2 のドライバが出す関節の状態のトピック名に、`topicName` を合わせる。
+xarm_ros2 のドライバが出す関節の状態のトピック名に、**Topic Name** を合わせる。
