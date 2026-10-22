@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using ROS2;
+using RosMessageTypes.Sensor;
+using Unity.Robotics.ROSTCPConnector;
 using Unity.Robotics.UrdfImporter;
 using UnityEngine;
 
@@ -8,12 +9,11 @@ namespace DigitalTwin
 
 /// <summary>
 /// /joint_states (sensor_msgs/JointState) を購読し、取り込んだロボットの関節に反映する。
-/// 同じ GameObject に ROS2UnityComponent が必要。
+/// ROS-TCP-Connector を使う。PC 側で ROS-TCP-Endpoint を起動しておく。
 /// </summary>
 public class JointStateSubscriber : MonoBehaviour
 {
     [SerializeField] private string topicName = "/joint_states";
-    [SerializeField] private string nodeName = "unity_joint_state_subscriber";
     [SerializeField] private Transform robotRoot;
     [SerializeField] private List<string> mimicJoints = new List<string>
     {
@@ -26,29 +26,20 @@ public class JointStateSubscriber : MonoBehaviour
 
     private const string DriveJointName = "drive_joint";
 
-    private ROS2UnityComponent ros2Unity;
-    private ROS2Node ros2Node;
-    private ISubscription<sensor_msgs.msg.JointState> jointSub;
-
     private readonly Dictionary<string, ArticulationBody> bodies = new Dictionary<string, ArticulationBody>();
     private readonly HashSet<string> warnedNames = new HashSet<string>();
 
-    // コールバック（メインスレッドではない）と Update の間で共有する。lock で守る。
-    private readonly object bufferLock = new object();
-    private readonly Dictionary<string, double> latest = new Dictionary<string, double>();
-    private bool hasNew;
-
     private readonly Dictionary<string, double> work = new Dictionary<string, double>();
 
-    // 切り分け用ログを 1 回だけ出すためのフラグ（メインスレッドでのみ使う）。
+    // 切り分け用ログを 1 回だけ出すためのフラグ。
     private bool loggedFirstMessage;
     private bool loggedFirstApply;
 
     void Start()
     {
-        ros2Unity = GetComponent<ROS2UnityComponent>();
         CollectJoints();
         LogStartup();
+        ROSConnection.GetOrCreateInstance().Subscribe<JointStateMsg>(topicName, OnJointState);
     }
 
     private void LogStartup()
@@ -87,26 +78,18 @@ public class JointStateSubscriber : MonoBehaviour
         }
     }
 
-    void Update()
+    // ROS-TCP-Connector はコールバックを Unity のメインスレッドで呼ぶ。
+    private void OnJointState(JointStateMsg msg)
     {
-        if (ros2Node == null && ros2Unity != null && ros2Unity.Ok())
+        if (msg == null || msg.name == null || msg.position == null)
         {
-            ros2Node = ros2Unity.CreateNode(nodeName);
-            jointSub = ros2Node.CreateSubscription<sensor_msgs.msg.JointState>(topicName, OnJointState);
+            return;
         }
-
+        int count = Mathf.Min(msg.name.Length, msg.position.Length);
         work.Clear();
-        lock (bufferLock)
+        for (int i = 0; i < count; i++)
         {
-            if (!hasNew)
-            {
-                return;
-            }
-            foreach (KeyValuePair<string, double> pair in latest)
-            {
-                work[pair.Key] = pair.Value;
-            }
-            hasNew = false;
+            work[msg.name[i]] = msg.position[i];
         }
 
         if (!loggedFirstMessage)
@@ -165,24 +148,6 @@ public class JointStateSubscriber : MonoBehaviour
                     + " jointPosition[0]=" + sampleBody.jointPosition[0]
                     + " xDrive.target=" + sampleBody.xDrive.target);
             }
-        }
-    }
-
-    // 受信スレッドで呼ばれる。Unity の API は呼ばず、バッファに写すだけにする。
-    private void OnJointState(sensor_msgs.msg.JointState msg)
-    {
-        if (msg == null || msg.Name == null || msg.Position == null)
-        {
-            return;
-        }
-        int count = Mathf.Min(msg.Name.Length, msg.Position.Length);
-        lock (bufferLock)
-        {
-            for (int i = 0; i < count; i++)
-            {
-                latest[msg.Name[i]] = msg.Position[i];
-            }
-            hasNew = true;
         }
     }
 

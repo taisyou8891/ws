@@ -17,3 +17,7 @@
 	path = ros2_ws/src/xarm_ros2
 	url = https://github.com/xArm-Developer/xarm_ros2.git
 	branch = humble
+[submodule "ros2_ws/src/ROS-TCP-Endpoint"]
+	path = ros2_ws/src/ROS-TCP-Endpoint
+	url = https://github.com/Unity-Technologies/ROS-TCP-Endpoint.git
+	branch = main-ros2
