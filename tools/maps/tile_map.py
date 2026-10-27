@@ -15,6 +15,14 @@ REQUIRED_PROPS = [
     "x", "y", "z", "opacity", "scale_0", "scale_1", "scale_2",
     "rot_0", "rot_1", "rot_2", "rot_3", "f_dc_0", "f_dc_1", "f_dc_2",
 ]
+DEFAULTS = {
+    "min_opacity": 0.05,
+    "min_views": 4,
+    "scale_quantile": 0.999,
+    "bbox": None,
+    "tiles_per_axis": 4,
+}
+PARAM_KEYS = {"source_sha256", *DEFAULTS}
 MAX_PREVIEW_POINTS = 200_000
 PREVIEW_SEED = 0
 
@@ -35,14 +43,46 @@ def parse_args(argv):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--name", required=True, help="地図の名前")
     p.add_argument("--replace", action="store_true", help="既存のタイルと tiles.json を作り直す")
-    p.add_argument("--min_opacity", type=float, default=0.05, help="不透明度の下限（既定 0.05）")
-    p.add_argument("--min_views", type=int, default=4, help="写るカメラ数の下限（既定 4）")
-    p.add_argument("--scale_quantile", type=float, default=0.999, help="大きさの分位点（既定 0.999）")
+    p.add_argument("--min_opacity", type=float, default=None, help="不透明度の下限（既定 0.05）")
+    p.add_argument("--min_views", type=int, default=None, help="写るカメラ数の下限（既定 4）")
+    p.add_argument("--scale_quantile", type=float, default=None, help="大きさの分位点（既定 0.999）")
     p.add_argument("--bbox", type=float, nargs=6, default=None,
                    metavar=("XMIN", "YMIN", "ZMIN", "XMAX", "YMAX", "ZMAX"), help="残す箱")
-    p.add_argument("--tiles_per_axis", type=int, default=4, help="軸ごとのタイル数（既定 4）")
+    p.add_argument("--tiles_per_axis", type=int, default=None, help="軸ごとのタイル数（既定 4）")
+    p.add_argument("--params", default=None,
+                   help="タイル分割の値のファイル（既定 data/maps/<名前>/tile_params.json）")
     p.add_argument("--root", default=str(DEFAULT_ROOT), help="リポジトリのルート（テスト用）")
     return p.parse_args(argv)
+
+
+def is_number(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def load_params(path):
+    """tile_params.json を読み、検証して辞書を返す。"""
+    try:
+        params = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise InputError(f"tile_params.json を読めない: {path}")
+    if not isinstance(params, dict):
+        raise InputError("tile_params.json がオブジェクトでない")
+    if not isinstance(params.get("source_sha256"), str):
+        raise InputError("tile_params.json に文字列の source_sha256 がない")
+    unknown = sorted(set(params) - PARAM_KEYS)
+    if unknown:
+        raise InputError(f"tile_params.json に知らない項目がある: {', '.join(unknown)}")
+    for key in ("min_opacity", "scale_quantile"):
+        if key in params and not is_number(params[key]):
+            raise InputError(f"tile_params.json の {key} が数でない")
+    for key in ("min_views", "tiles_per_axis"):
+        if key in params and (not isinstance(params[key], int) or isinstance(params[key], bool)):
+            raise InputError(f"tile_params.json の {key} が整数でない")
+    if "bbox" in params and params["bbox"] is not None:
+        b = params["bbox"]
+        if not (isinstance(b, list) and len(b) == 6 and all(is_number(v) for v in b)):
+            raise InputError("tile_params.json の bbox が null か 6 個の数の配列でない")
+    return params
 
 
 def read_header(path):
@@ -165,7 +205,7 @@ def main(argv=None):
     tiles_dir = map_dir / "tiles"
     tiles_json = map_dir / "tiles.json"
 
-    if args.tiles_per_axis < 1:
+    if args.tiles_per_axis is not None and args.tiles_per_axis < 1:
         print("error: --tiles_per_axis は 1 以上", file=sys.stderr)
         return 2
 
@@ -188,6 +228,34 @@ def main(argv=None):
                 raise InputError(f"{rel} の sha256 が登録と一致しない")
         header, n, props = read_header(ply_path)
         cameras = load_cameras(cam_path)
+
+        params_path = Path(args.params) if args.params is not None else map_dir / "tile_params.json"
+        file_params = {}
+        params_file = None
+        if args.params is not None or params_path.exists():
+            file_params = load_params(params_path)
+            if file_params["source_sha256"] != digests["point_cloud.ply"]:
+                raise InputError(
+                    "tile_params.json の source_sha256 が point_cloud.ply と一致しない。"
+                    "地図が変わったので値を見直し、source_sha256 を maps.json の "
+                    "files[\"point_cloud.ply\"] の値に書き換えること")
+            try:
+                params_file = params_path.resolve().relative_to(root).as_posix()
+            except ValueError:
+                params_file = str(params_path)
+        used = {}
+        for key, default in DEFAULTS.items():
+            given = getattr(args, key)
+            if given is not None:
+                used[key] = given
+            elif key in file_params:
+                used[key] = file_params[key]
+            else:
+                used[key] = default
+        if used["bbox"] is not None:
+            used["bbox"] = list(used["bbox"])
+        if used["tiles_per_axis"] < 1:
+            raise InputError("tiles_per_axis は 1 以上")
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return 2
@@ -205,12 +273,12 @@ def main(argv=None):
     counts = {"input": n}
 
     opacity = 1.0 / (1.0 + np.exp(-data[:, col["opacity"]].astype(np.float64)))
-    keep = opacity >= args.min_opacity
+    keep = opacity >= used["min_opacity"]
     counts["removed_opacity"] = int(n - keep.sum())
     alive = alive[keep]
 
-    if args.min_views > 0:
-        keep = count_views(xyz[alive], cameras) >= args.min_views
+    if used["min_views"] > 0:
+        keep = count_views(xyz[alive], cameras) >= used["min_views"]
     else:
         keep = np.ones(len(alive), dtype=bool)
     counts["removed_views"] = int(len(alive) - keep.sum())
@@ -219,15 +287,15 @@ def main(argv=None):
     if len(alive) > 0:
         s = np.stack([data[alive, col[f"scale_{i}"]] for i in range(3)], axis=1).astype(np.float64)
         size = np.exp(s.max(axis=1))
-        keep = size <= np.quantile(size, args.scale_quantile)
+        keep = size <= np.quantile(size, used["scale_quantile"])
     else:
         keep = np.ones(0, dtype=bool)
     counts["removed_scale"] = int(len(alive) - keep.sum())
     alive = alive[keep]
 
-    if args.bbox is not None:
-        lo = np.asarray(args.bbox[:3])
-        hi = np.asarray(args.bbox[3:])
+    if used["bbox"] is not None:
+        lo = np.asarray(used["bbox"][:3])
+        hi = np.asarray(used["bbox"][3:])
         pts = xyz[alive]
         keep = np.all((pts >= lo) & (pts <= hi), axis=1)
     else:
@@ -243,9 +311,9 @@ def main(argv=None):
     pts = xyz[alive]
     origin = pts.min(axis=0)
     extent = float((pts.max(axis=0) - origin).max())
-    tile_size = extent / args.tiles_per_axis if extent > 0 else 1.0
-    idx = np.clip(np.floor((pts - origin) / tile_size).astype(np.int64), 0, args.tiles_per_axis - 1)
-    key = (idx[:, 0] * args.tiles_per_axis + idx[:, 1]) * args.tiles_per_axis + idx[:, 2]
+    tile_size = extent / used["tiles_per_axis"] if extent > 0 else 1.0
+    idx = np.clip(np.floor((pts - origin) / tile_size).astype(np.int64), 0, used["tiles_per_axis"] - 1)
+    key = (idx[:, 0] * used["tiles_per_axis"] + idx[:, 1]) * used["tiles_per_axis"] + idx[:, 2]
     order = np.argsort(key, kind="stable")  # 同じタイル内では入力の順を保つ
     sorted_key = key[order]
     uniq, starts = np.unique(sorted_key, return_index=True)
@@ -282,13 +350,8 @@ def main(argv=None):
         "source": f"data/maps/{args.name}/raw/point_cloud.ply",
         "source_sha256": digests["point_cloud.ply"],
         "cameras_sha256": digests["cameras.json"],
-        "params": {
-            "min_opacity": args.min_opacity,
-            "min_views": args.min_views,
-            "scale_quantile": args.scale_quantile,
-            "bbox": list(args.bbox) if args.bbox is not None else None,
-            "tiles_per_axis": args.tiles_per_axis,
-        },
+        "params_file": params_file,
+        "params": dict(used),
         "counts": counts,
         "origin": [float(v) for v in origin],
         "tile_size": float(tile_size),
@@ -297,7 +360,7 @@ def main(argv=None):
     tiles_json.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     f_dc = np.stack([data[alive, col[f"f_dc_{i}"]] for i in range(3)], axis=1).astype(np.float64)
-    write_previews(tiles_dir, pts, f_dc, args.bbox)
+    write_previews(tiles_dir, pts, f_dc, used["bbox"])
 
     print(f"counts={json.dumps(counts)} tiles={len(tiles)}")
     return 0
