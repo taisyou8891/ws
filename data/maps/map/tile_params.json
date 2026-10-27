@@ -1,0 +1,8 @@
+{
+  "source_sha256": "c2bb3318c7c2a2dfdaed67bf0a4f033866e2a6e64edcb8b229921af141a20513",
+  "min_opacity": 0.05,
+  "min_views": 4,
+  "scale_quantile": 0.999,
+  "bbox": [-0.45, -0.35, 0.15, 0.4, 0.4, 0.9],
+  "tiles_per_axis": 4
+}

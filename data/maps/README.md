@@ -143,13 +143,21 @@ python3 tools/maps/tile_map.py --name map
 
 - `--name`：地図の名前（必須）
 - `--replace`：既存の `tiles/` と `tiles.json` を作り直す（付けないと、出力が既にあるときは終了コード 1 で止まる）
+- `--params`：タイル分割の値のファイル（既定は `data/maps/<名前>/tile_params.json`）
 - `--min_opacity`：不透明度の下限（既定 0.05）
 - `--min_views`：写るカメラ数の下限（既定 4。0 なら除かない）
 - `--scale_quantile`：大きさの分位点。これより大きいものを除く（既定 0.999）
 - `--bbox XMIN YMIN ZMIN XMAX YMAX ZMAX`：指定した箱の外を除く（既定は指定なし）
 - `--tiles_per_axis`：軸ごとのタイル数（既定 4）
 
-除く順は、不透明度、写る枚数、大きさ、箱。入力の sha256 が `maps.json` の登録と違うとき、PLY のヘッダが想定の形でないときは、終了コード 2 で何も作らずに止まる。
+値の優先順位は、コマンドラインの引数、`tile_params.json`、既定値の順（引数が最優先）。`tile_params.json` がなければ、引数と既定値だけを使う。
+
+除く順は、不透明度、写る枚数、大きさ、箱。次のときは、終了コード 2 で何も作らずに止まる。
+
+- 入力の sha256 が `maps.json` の登録と違う
+- PLY のヘッダが想定の形でない
+- `tile_params.json` が読めない、`source_sha256` がない、知らない項目がある、値の型が正しくない
+- `tile_params.json` の `source_sha256` が入力の `point_cloud.ply` の sha256 と違う（地図が変わったときに、古い値のまま実行しないため）
 
 出力（`data/maps/<名前>/` の下）：
 
@@ -161,9 +169,51 @@ python3 tools/maps/tile_map.py --name map
 
 - `name`・`source`：地図の名前と入力の PLY のパス
 - `source_sha256`・`cameras_sha256`：入力の PLY と `cameras.json` の sha256
-- `params`：実行時の引数（`bbox` は指定がなければ `null`）
+- `params_file`：使った `tile_params.json` のパス（リポジトリのルートからの相対。使わなければ `null`）
+- `params`：実際に使った値（優先順位を適用した後。`bbox` は指定がなければ `null`）
 - `counts`：入力の数 `input`、除いた数 `removed_opacity`・`removed_views`・`removed_scale`・`removed_bbox`、残った数 `kept`
 - `origin`・`tile_size`：タイルの原点と一辺の長さ
 - `tiles`：タイルごとの `file`・`index`・`count`・`min`・`max`・`sha256`（`index` の辞書順）
 
 確認用の図の見方：残ったガウシアンの中心を 2 軸の平面に打った散布図で、色は元の色に近い。`preview_xy.png` は x と y、`preview_xz.png` は x と z、`preview_zy.png` は z（横）と y（縦）。作業台の周りに点が集まっているか、外に浮遊物が残っていないかを見て、残したい範囲を決め、`--bbox` に指定して `--replace` で作り直す。`--bbox` を指定すると、図に箱の範囲が赤い枠で描かれる。
+
+### tile_params.json
+
+タイル分割の値は、地図ごとのファイル `data/maps/<名前>/tile_params.json` に置く（人が手で直すファイルで、ツールは書き換えない）。
+
+```
+{
+  "source_sha256": "<値を決めた地図の point_cloud.ply の sha256>",
+  "min_opacity": 0.05,
+  "min_views": 4,
+  "scale_quantile": 0.999,
+  "bbox": [-0.45, -0.35, 0.15, 0.4, 0.4, 0.9],
+  "tiles_per_axis": 4
+}
+```
+
+- `source_sha256` は必須。そのほかの項目は省略でき、省略した項目は既定値を使う。
+- `bbox` は `null` か 6 個の数の配列。
+- 上の 6 個以外の項目があると、エラーにする。
+
+## 入力画像を変えたとき（値の直し方）
+
+値の置き場所は `data/maps/<名前>/tile_params.json`。直すのはこのファイルだけで、コードは直さない。
+
+各値の意味と、直す目安：
+
+- `bbox`：地図を作り直すと InstantSplat の座標が変わり、前の箱は意味を持たなくなる。毎回決め直す。
+- `min_views`：写真の枚数（`maps.json` の `n_views`）が変わったら見直す。目安は枚数の 3 分の 2 程度（6 枚なら 4）。
+- `min_opacity`・`scale_quantile`：通常は変えない。
+- `tiles_per_axis`：タイルが大きすぎる、または細かすぎるときに変える。
+
+手順（リポジトリのルートで、コマンドを 1 つずつ実行する）：
+
+1. 地図を作り直す（「地図を作り直す」の節の手順）。`maps.json` の `files["point_cloud.ply"]` が変わる。
+2. `python3 tools/maps/tile_map.py --name <名前> --replace` を実行する。`source_sha256` が一致しないので、終了コード 2 で止まる（古い箱のまま実行しないため）。
+3. `tile_params.json` の `source_sha256` を、`maps.json` の `files["point_cloud.ply"]` の新しい値にし、`bbox` を `null` にする。
+4. `python3 tools/maps/tile_map.py --name <名前> --replace` を実行し、`tiles/preview_*.png` を見て箱を決める。
+5. 決めた箱を `tile_params.json` の `bbox` に書き、もう一度 `--replace` で実行する。図に赤い枠が描かれるので、範囲を確かめる。
+6. `tile_params.json` と `tiles.json` の変更を、Issue と PR の流れで反映する。
+
+試しに別の値で実行したいときは、ファイルを直さずに引数で上書きできる（例：`--bbox ...`）。その場合も、`tiles.json` の `params` には実際に使った値が残る。

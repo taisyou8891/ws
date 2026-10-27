@@ -399,3 +399,125 @@ def test_deterministic(tmp_path):
     first = outputs()
     assert run(tmp_path, *opts(), "--replace").returncode == 0
     assert outputs() == first
+
+
+# ---- tile_params.json ----
+
+def write_params(root, raw, name="m", path=None, **kw):
+    """合成データの point_cloud.ply の sha256 を入れた tile_params.json を書く。"""
+    body = {"source_sha256": sha((raw / "point_cloud.ply").read_bytes())}
+    body.update(kw)
+    path = path or root / "data/maps" / name / "tile_params.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(body), encoding="utf-8")
+    return path
+
+
+def params_setup(tmp_path, n=300):
+    rows = make_rows(n, seed=31)
+    place(rows, np.random.default_rng(32).uniform(-1, 1, size=(n, 3)))
+    return setup(tmp_path, rows)
+
+
+def assert_no_output(root):
+    assert not (root / "data/maps/m/tiles").exists()
+    assert not (root / "data/maps/m/tiles.json").exists()
+
+
+def test_params_file_values_used(tmp_path):
+    raw = params_setup(tmp_path)
+    write_params(tmp_path, raw, min_opacity=0.0, min_views=0, scale_quantile=1.0,
+                 bbox=[-0.5, -0.5, -0.5, 0.5, 0.5, 0.5], tiles_per_axis=2)
+    r = run(tmp_path)
+    assert r.returncode == 0, r.stderr
+    t = load(tmp_path)
+    assert t["params_file"] == "data/maps/m/tile_params.json"
+    assert t["params"] == {"min_opacity": 0.0, "min_views": 0, "scale_quantile": 1.0,
+                           "bbox": [-0.5, -0.5, -0.5, 0.5, 0.5, 0.5], "tiles_per_axis": 2}
+    assert t["counts"]["removed_bbox"] > 0
+    assert max(max(x["index"]) for x in t["tiles"]) <= 1
+
+
+def test_args_override_params_file(tmp_path):
+    raw = params_setup(tmp_path)
+    write_params(tmp_path, raw, min_opacity=0.0, min_views=0, scale_quantile=1.0,
+                 bbox=[-0.5, -0.5, -0.5, 0.5, 0.5, 0.5], tiles_per_axis=2)
+    r = run(tmp_path, "--tiles_per_axis", "3", "--bbox", "-1", "-1", "-1", "1", "1", "1",
+            "--min_views", "0")
+    assert r.returncode == 0, r.stderr
+    t = load(tmp_path)
+    assert t["params"]["tiles_per_axis"] == 3
+    assert t["params"]["bbox"] == [-1, -1, -1, 1, 1, 1]
+    assert t["params"]["min_opacity"] == 0.0  # 指定しない項目はファイルの値
+    assert t["counts"]["removed_bbox"] == 0
+    assert t["params_file"] == "data/maps/m/tile_params.json"
+
+
+def test_params_file_omitted_items_use_defaults(tmp_path):
+    raw = params_setup(tmp_path)
+    write_params(tmp_path, raw, min_views=0, bbox=None)
+    r = run(tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert load(tmp_path)["params"] == {"min_opacity": 0.05, "min_views": 0,
+                                        "scale_quantile": 0.999, "bbox": None,
+                                        "tiles_per_axis": 4}
+
+
+def test_no_params_file_same_as_before(tmp_path):
+    params_setup(tmp_path)
+    r = run(tmp_path, *opts())
+    assert r.returncode == 0, r.stderr
+    t = load(tmp_path)
+    assert t["params_file"] is None
+    assert t["params"] == {"min_opacity": 0.0, "min_views": 0, "scale_quantile": 1.0,
+                           "bbox": None, "tiles_per_axis": 4}
+
+
+def test_params_file_sha_mismatch_fails(tmp_path):
+    raw = params_setup(tmp_path)
+    p = write_params(tmp_path, raw, min_views=0)
+    body = json.loads(p.read_text())
+    body["source_sha256"] = "0" * 64
+    p.write_text(json.dumps(body))
+    r = run(tmp_path)
+    assert r.returncode == 2
+    assert "source_sha256" in r.stderr
+    assert_no_output(tmp_path)
+
+
+def test_params_file_bad_content_fails(tmp_path):
+    raw = params_setup(tmp_path)
+    good = sha((raw / "point_cloud.ply").read_bytes())
+    cases = [
+        "{not json",
+        "[1, 2]",
+        json.dumps({"min_views": 0}),
+        json.dumps({"source_sha256": good, "unknown_item": 1}),
+        json.dumps({"source_sha256": good, "bbox": [0, 0, 0, 1, 1]}),
+        json.dumps({"source_sha256": good, "bbox": [0, 0, 0, 1, 1, "x"]}),
+        json.dumps({"source_sha256": good, "bbox": 5}),
+        json.dumps({"source_sha256": good, "min_views": "4"}),
+        json.dumps({"source_sha256": good, "min_views": 1.5}),
+        json.dumps({"source_sha256": good, "tiles_per_axis": 0}),
+        json.dumps({"source_sha256": good, "min_opacity": True}),
+    ]
+    for text in cases:
+        (tmp_path / "data/maps/m/tile_params.json").write_text(text)
+        r = run(tmp_path)
+        assert r.returncode == 2, text
+        assert "error:" in r.stderr
+        assert_no_output(tmp_path)
+
+
+def test_params_option_selects_other_file(tmp_path):
+    raw = params_setup(tmp_path)
+    write_params(tmp_path, raw, tiles_per_axis=3, min_views=0)  # 既定の場所のファイル
+    other = write_params(tmp_path, raw, path=tmp_path / "elsewhere/p.json",
+                         tiles_per_axis=2, min_views=0)
+    r = run(tmp_path, "--params", str(other))
+    assert r.returncode == 0, r.stderr
+    t = load(tmp_path)
+    assert t["params"]["tiles_per_axis"] == 2
+    assert t["params_file"] == "elsewhere/p.json"
+    missing = run(tmp_path, "--params", str(tmp_path / "none.json"), "--replace")
+    assert missing.returncode == 2
