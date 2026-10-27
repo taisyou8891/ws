@@ -24,6 +24,7 @@ __pycache__/
 data/maps/*/raw/
 data/maps/*/raw_prev/
 data/maps/*/work/
+data/maps/*/tiles/
 
 # External directories that are not git repositories
 /Ros2ForUnity/

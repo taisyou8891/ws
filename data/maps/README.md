@@ -130,3 +130,40 @@ ls data/maps/map/work/output/train/ours_1000/renders/
 - `data/maps/maps.json` はリポジトリで追跡しているので、作り直すと差分が出る。この変更は Issue と PR の流れで反映する。
 - 作り直した地図は `frame` が `"unaligned"` に戻る。位置合わせ（E1）をやり直す必要がある。
 - 前の版に戻すときは、`data/maps/<名前>/raw_prev/` を `raw/` に戻し、`maps.json` を `git checkout data/maps/maps.json` で戻す。
+
+## タイルに分ける（軽くする）
+
+登録済みの地図から、作業空間の外と不要なガウシアンを除き、空間の格子（タイル）ごとの PLY に分ける。リポジトリのルートで実行する。
+
+```
+python3 tools/maps/tile_map.py --name map
+```
+
+引数：
+
+- `--name`：地図の名前（必須）
+- `--replace`：既存の `tiles/` と `tiles.json` を作り直す（付けないと、出力が既にあるときは終了コード 1 で止まる）
+- `--min_opacity`：不透明度の下限（既定 0.05）
+- `--min_views`：写るカメラ数の下限（既定 4。0 なら除かない）
+- `--scale_quantile`：大きさの分位点。これより大きいものを除く（既定 0.999）
+- `--bbox XMIN YMIN ZMIN XMAX YMAX ZMAX`：指定した箱の外を除く（既定は指定なし）
+- `--tiles_per_axis`：軸ごとのタイル数（既定 4）
+
+除く順は、不透明度、写る枚数、大きさ、箱。入力の sha256 が `maps.json` の登録と違うとき、PLY のヘッダが想定の形でないときは、終了コード 2 で何も作らずに止まる。
+
+出力（`data/maps/<名前>/` の下）：
+
+- `tiles/tile_<i>_<j>_<k>.ply`：タイルごとの PLY（`.gitignore` で追跡しない）
+- `tiles/preview_xy.png`・`preview_xz.png`・`preview_zy.png`：確認用の図（追跡しない）
+- `tiles.json`：実行の結果の一覧（追跡する）
+
+`tiles.json` の項目：
+
+- `name`・`source`：地図の名前と入力の PLY のパス
+- `source_sha256`・`cameras_sha256`：入力の PLY と `cameras.json` の sha256
+- `params`：実行時の引数（`bbox` は指定がなければ `null`）
+- `counts`：入力の数 `input`、除いた数 `removed_opacity`・`removed_views`・`removed_scale`・`removed_bbox`、残った数 `kept`
+- `origin`・`tile_size`：タイルの原点と一辺の長さ
+- `tiles`：タイルごとの `file`・`index`・`count`・`min`・`max`・`sha256`（`index` の辞書順）
+
+確認用の図の見方：残ったガウシアンの中心を 2 軸の平面に打った散布図で、色は元の色に近い。`preview_xy.png` は x と y、`preview_xz.png` は x と z、`preview_zy.png` は z（横）と y（縦）。作業台の周りに点が集まっているか、外に浮遊物が残っていないかを見て、残したい範囲を決め、`--bbox` に指定して `--replace` で作り直す。`--bbox` を指定すると、図に箱の範囲が赤い枠で描かれる。
