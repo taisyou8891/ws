@@ -52,6 +52,34 @@ Unity Hub で `unity/DigitalTwin/` を開く。URDF Importer と ROS-TCP-Connect
 
 メニューの GameObject → Align With View（Ctrl+Shift+F）を選ぶ。Main Camera が今の Scene ビューと同じ位置・向きに移り、再生中もその視点で見える。
 
+## 地図の読み込み
+
+3DGS の地図のタイル（`data/maps/<名前>/tiles/`）を、シーンにガウシアンとして表示する。描画には 3DGS 描画パッケージ（`org.nesnausk.gaussian-splatting` v1.1.2）を使う。
+
+### 必要なこと（初回だけ）
+
+Linux ではグラフィックス API を Vulkan にする。このパッケージは OpenGL では動かない（今のエディタは OpenGL で動いている）。
+
+1. Edit > Project Settings > Player を開き、Linux のタブの Other Settings に進む。
+2. 「Auto Graphics API for Linux」を外す。
+3. 一覧で Vulkan を一番上にする。
+4. エディタを再起動する。
+
+### 読み込む手順
+
+1. リポジトリのルートで `python3 tools/maps/tile_map.py --name map --replace` を実行してタイルを作る（タイルの PLY は追跡しないので、新しい環境では最初に必要）。
+2. Unity で Tools > Digital Twin > Load Map Tiles を開き、名前に `map` を入れて読み込む。
+3. シーンに `Map_map` ができる。向きがおかしいときは、`Map_map` の回転を変える（子のタイルは変えない）。
+4. シーンを保存する。
+
+### 地図やタイルを作り直したとき
+
+もう一度メニューから読み込むと、sha256 が変わったタイルだけが作り直される。
+
+### 生成されるアセット
+
+`Assets/Map/Generated/` に作られるアセットは追跡しない。新しい環境では、上の手順 1・2 で作り直す。
+
 ## 中継ノードのビルド（初回と、更新したとき）
 
 リポジトリのルートで実行する。
