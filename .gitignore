@@ -10,6 +10,8 @@ MemoryCaptures/
 *.csproj
 *.sln
 .vs/
+unity/DigitalTwin/Assets/Map/Generated/
+unity/DigitalTwin/Assets/Map/Generated.meta
 
 # ROS 2
 build/
