@@ -35,7 +35,7 @@ bash tools/capture/record.sh
   /camera/camera/color/camera_info \
   /camera/camera/aligned_depth_to_color/image_raw \
   /joint_states
-
+```
 
 - 記録するトピック：`camera/camera/color/image_raw`、`camera/camera/color/camera_info`、`camera/camera/aligned_depth_to_color/image_raw`、`/joint_states`。
 - `data/captures/<名前>/bag/` が既にあれば、エラーで止める（上書きしない）。
