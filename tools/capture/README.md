@@ -30,10 +30,14 @@ ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true
 ```bash
 source /opt/ros/humble/setup.bash
 export ROS_DOMAIN_ID=44
-bash tools/capture/record.sh <名前> [--prefix /camera/camera]
-```
+bash tools/capture/record.sh
+  /camera/camera/color/image_raw \
+  /camera/camera/color/camera_info \
+  /camera/camera/aligned_depth_to_color/image_raw \
+  /joint_states
 
-- 記録するトピック：`<prefix>/color/image_raw`、`<prefix>/color/camera_info`、`<prefix>/aligned_depth_to_color/image_raw`、`/joint_states`。
+
+- 記録するトピック：`camera/camera/color/image_raw`、`camera/camera/color/camera_info`、`camera/camera/aligned_depth_to_color/image_raw`、`/joint_states`。
 - `data/captures/<名前>/bag/` が既にあれば、エラーで止める（上書きしない）。
 - カラー画像のトピックがなければ止める。`/joint_states` がなければ警告だけ出して続ける。
 - Ctrl+C で止める。
