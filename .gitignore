@@ -32,3 +32,6 @@ data/maps/*/tiles/
 /Ros2ForUnity/
 /my_data/
 data/input_data/
+
+# D435i captures (bag and extracted images)
+data/captures/
