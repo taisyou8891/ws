@@ -10,15 +10,8 @@ bag を残しておけば、取り出し方を変えてやり直せる。
 
 ```bash
 cd realsense-ros2-docker/docker
-docker compose up -d
-docker compose exec -e ROS_DOMAIN_ID=44 realsense_ros2 bash
-```
-
-コンテナの中で次を実行する。
-
-```bash
-source /opt/ros/humble/setup.bash
-ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true
+docker compose -f docker-compose-gui-nvidia.yml up -d
+docker compose -f docker-compose-gui-nvidia.yml logs -f
 ```
 
 止めるときは、`realsense-ros2-docker/docker` で `docker compose down` を実行する。
