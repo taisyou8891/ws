@@ -74,6 +74,18 @@ def nearest_index(stamps, t, max_dt_ns=None):
     return best, dt
 
 
+def build_depth_plan(depth_positions):
+    """index ごとの深度の位置（なければ None）から、深度の位置 -> index のリストを作る。
+
+    同じ深度が複数のカラーに選ばれても、すべての index に保存できるようにする。
+    """
+    plan = {}
+    for index, dpos in enumerate(depth_positions):
+        if dpos is not None:
+            plan.setdefault(dpos, []).append(index)
+    return plan
+
+
 def camera_info_to_dict(msg):
     """camera_info のメッセージ（属性を持つもの）を辞書にする。"""
     return {
@@ -189,19 +201,16 @@ def main(argv=None):
     selected = list(range(0, len(color_stamps), args.every))
     if args.max_frames is not None:
         selected = selected[:args.max_frames]
-    plan = {}  # color の位置 -> (index, depth の位置, dt)
-    depth_plan = {}  # depth の位置 -> index
+    plan = {}  # color の位置 -> index
     rows = {}
-    n_no_depth = n_no_joint = 0
+    n_no_joint = 0
+    matches = []
     for index, pos in enumerate(selected):
         t = color_stamps[pos]
+        plan[pos] = index
         k, dt = nearest_index(depth_sorted, t, DEPTH_MAX_DT_NS)
         dpos = depth_order[k] if k is not None else None
-        plan[pos] = (index, dpos, dt)
-        if dpos is None:
-            n_no_depth += 1
-        else:
-            depth_plan[dpos] = index
+        matches.append((dpos, dt))
         j, _ = nearest_index(joint_stamps, t)
         if j is None:
             n_no_joint += 1
@@ -209,6 +218,9 @@ def main(argv=None):
         else:
             names, positions = joints[j][1], joints[j][2]
         rows[index] = (t, dpos, dt, names, positions)
+
+    depth_plan = build_depth_plan([m[0] for m in matches])
+    n_no_depth = sum(1 for m in matches if m[0] is None)
 
     out_color.mkdir(parents=True, exist_ok=True)
     out_depth.mkdir(parents=True, exist_ok=True)
@@ -222,7 +234,7 @@ def main(argv=None):
                 continue
             msg = deserialize_message(raw, mtype)
             img = decode_color(msg.height, msg.width, msg.encoding, msg.step, msg.data)
-            path = out_color / f"frame_{plan[ci][0]:06d}.jpg"
+            path = out_color / f"frame_{plan[ci]:06d}.jpg"
             if not cv2.imwrite(str(path), img, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY]):
                 sys.exit(f"エラー: {path} を書けない")
         else:
@@ -231,9 +243,10 @@ def main(argv=None):
                 continue
             msg = deserialize_message(raw, mtype)
             img = decode_depth(msg.height, msg.width, msg.encoding, msg.step, msg.data)
-            path = out_depth / f"frame_{depth_plan[di]:06d}.png"
-            if not cv2.imwrite(str(path), img):
-                sys.exit(f"エラー: {path} を書けない")
+            for index in depth_plan[di]:
+                path = out_depth / f"frame_{index:06d}.png"
+                if not cv2.imwrite(str(path), img):
+                    sys.exit(f"エラー: {path} を書けない")
 
     if info is not None:
         out_info.write_text(json.dumps(info, indent=2) + "\n", encoding="utf-8")
