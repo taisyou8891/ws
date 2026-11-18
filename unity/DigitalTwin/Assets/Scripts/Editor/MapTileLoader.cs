@@ -175,9 +175,9 @@ namespace DigitalTwin
                     DestroyImmediate(creator);
                 }
                 EditorUtility.ClearProgressBar();
+                // どの経路（作成のクラスが見つからない場合・例外を含む）でも 1 行出す
+                Debug.Log($"[MapTileLoader] map '{mapName}': created {created}, kept {skipped}, removed {removed}, failed {failed}");
             }
-
-            Debug.Log($"[MapTileLoader] map '{mapName}': created {created}, kept {skipped}, removed {removed}, failed {failed}");
         }
 
         // ---------------------------------------------------------------- import_state.json
@@ -330,7 +330,7 @@ namespace DigitalTwin
 
             Type m_Type;
             FieldInfo m_InputFile, m_OutputFolder, m_Quality, m_ErrorMessage;
-            MethodInfo m_CreateAsset;
+            MethodInfo m_CreateAsset, m_ApplyQualityLevel;
 
             public ScriptableObject Create()
             {
@@ -346,6 +346,7 @@ namespace DigitalTwin
                 m_Quality = m_Type.GetField("m_Quality", kFlags);
                 m_ErrorMessage = m_Type.GetField("m_ErrorMessage", kFlags);
                 m_CreateAsset = m_Type.GetMethod("CreateAsset", kFlags);
+                m_ApplyQualityLevel = m_Type.GetMethod("ApplyQualityLevel", kFlags, null, Type.EmptyTypes, null);
 
                 var missing = new List<string>();
                 if (m_InputFile == null) missing.Add("m_InputFile");
@@ -353,6 +354,7 @@ namespace DigitalTwin
                 if (m_Quality == null) missing.Add("m_Quality");
                 if (m_ErrorMessage == null) missing.Add("m_ErrorMessage");
                 if (m_CreateAsset == null) missing.Add("CreateAsset");
+                if (m_ApplyQualityLevel == null) missing.Add("ApplyQualityLevel");
                 if (missing.Count > 0)
                 {
                     Debug.LogError($"[MapTileLoader] not found in {kCreatorType}: {string.Join(", ", missing)}");
@@ -372,6 +374,8 @@ namespace DigitalTwin
 
                 var instance = ScriptableObject.CreateInstance(m_Type);
                 m_Quality.SetValue(instance, medium);
+                // 前に画面で選んだ品質（EditorPrefs）の形式が残らないよう、Medium の形式を決め直す
+                m_ApplyQualityLevel.Invoke(instance, null);
                 return instance;
             }
 
