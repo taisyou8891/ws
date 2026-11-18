@@ -11,7 +11,7 @@ bag を残しておけば、取り出し方を変えてやり直せる。
 ```bash
 cd realsense-ros2-docker/docker
 docker compose up -d
-docker compose exec -e realsense_ros2 bash
+docker compose exec -e ROS_DOMAIN_ID=44 realsense_ros2 bash
 ```
 
 コンテナの中で次を実行する。
