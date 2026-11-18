@@ -34,6 +34,7 @@ def test_map_tile_loader_has_main_parts():
         "import_state.json",
         "GaussianSplatAssetCreator",
         "CreateAsset",
+        "ApplyQualityLevel",
         "m_ErrorMessage",
         "GaussianSplatRenderer",
         "m_Asset",
