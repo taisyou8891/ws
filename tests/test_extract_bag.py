@@ -93,3 +93,21 @@ def test_make_frame_row_with_joints():
 def test_make_frame_row_without_joints_or_depth():
     row = eb.make_frame_row(0, 9, "color/frame_000000.jpg", "", None, [], [])
     assert row == [0, 9, "color/frame_000000.jpg", "", "", "", ""]
+
+
+def test_depth_plan_keeps_every_index_sharing_one_depth():
+    # 深度の位置 1 が index 1 と 2 の両方に選ばれ、index 3 は深度なし
+    plan = eb.build_depth_plan([0, 1, 1, None, 2])
+    assert plan == {0: [0], 1: [1, 2], 2: [4]}
+
+
+def test_depth_plan_when_a_depth_frame_is_dropped():
+    depth_stamps = [0, 33_000_000, 99_000_000]  # 66 ms の深度が欠けた
+    color_stamps = [0, 33_000_000, 66_000_000, 99_000_000]
+    positions = []
+    for t in color_stamps:
+        k, _ = eb.nearest_index(depth_stamps, t, eb.DEPTH_MAX_DT_NS)
+        positions.append(k)
+    plan = eb.build_depth_plan(positions)
+    covered = sorted(i for v in plan.values() for i in v)
+    assert covered == [i for i, p in enumerate(positions) if p is not None]
