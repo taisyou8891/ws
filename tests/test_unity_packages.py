@@ -14,3 +14,9 @@ def test_ros_tcp_connector_is_pinned():
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     value = manifest["dependencies"]["com.unity.robotics.ros-tcp-connector"]
     assert value.endswith("#v0.7.1")
+
+
+def test_gaussian_splatting_is_pinned():
+    manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    value = manifest["dependencies"]["org.nesnausk.gaussian-splatting"]
+    assert value.endswith("#v1.1.2")
