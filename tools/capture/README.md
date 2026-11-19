@@ -6,15 +6,45 @@ bag を残しておけば、取り出し方を変えてやり直せる。
 
 ## 1. カメラを起動する
 
-カメラのドライバは、サブモジュール `realsense-ros2-docker` の Docker（`network_mode: "host"`）で動かす。トピックはホストから見える。
+カメラのドライバは、サブモジュール `realsense-ros2-docker` の Docker（`docker-compose-gui-nvidia.yml`）で動かす。
+起動は前景で行う。止めるときは Ctrl+C。
 
 ```bash
 cd realsense-ros2-docker/docker
-docker compose -f docker-compose-gui-nvidia.yml up -d
-docker compose -f docker-compose-gui-nvidia.yml logs -f
+docker compose -f docker-compose-gui-nvidia.yml up
 ```
 
-止めるときは、`realsense-ros2-docker/docker` で `docker compose down` を実行する。
+片付けは、同じ場所で次を実行する。
+
+```bash
+docker compose -f docker-compose-gui-nvidia.yml down
+```
+
+起動の後、別の端末のホストで、カラー画像が約 30 Hz で届くことを確かめる。
+
+```bash
+source /opt/ros/humble/setup.bash
+export ROS_DOMAIN_ID=44
+ros2 topic hz /camera/camera/color/image_raw
+```
+
+### サブモジュールに必要な手元の変更
+
+記録できるのは、サブモジュールの中に、コミットされていない次の手元の変更があるときだけである。変更があるかは、`git -C realsense-ros2-docker diff --stat` で確かめられる。
+
+- `docker/docker-compose-gui-nvidia.yml` の `realsense_ros2` に加えるもの：
+  - `network_mode: host`・`ipc: host`・`pid: host`
+  - `environment` に `ROS_DOMAIN_ID=44`
+  - 次の `command`
+
+    ```
+    /bin/bash -c "source /opt/ros/humble/setup.bash && ros2 launch realsense2_camera rs_launch.py depth_module.depth_profile:=640x480x30 rgb_camera.color_profile:=640x480x30 align_depth.enable:=true enable_gyro:=false enable_accel:=false enable_motion_module:=false depth_module.depth_format:=Z16"
+    ```
+- `docker/docker-compose.yml` の `realsense_ros2` に加えるもの：`network_mode: "host"`
+
+`ipc: host`・`pid: host` がないと、ホストで記録した bag が 0 件になる。
+コンテナ（root）とホスト（一般のユーザ）の間で、Fast DDS の共有メモリ（`/dev/shm`）が使えず、
+データがホストに届かないためである。
 
 ## 2. 記録する
 
