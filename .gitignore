@@ -28,6 +28,7 @@ data/maps/*/raw_prev/
 data/maps/*/work/
 data/maps/*/tiles/
 data/clsplats/
+data/gsicp/
 
 # External directories that are not git repositories
 /Ros2ForUnity/
